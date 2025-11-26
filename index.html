@@ -16,7 +16,7 @@
     background-position: center bottom;
     background-repeat: no-repeat;
     overflow: hidden;
-    touch-action: none; /* ブラウザのデフォルト操作を無効化 */
+    touch-action: none;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -65,14 +65,10 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      /* ステッカー風デザイン */
-      background-color: #fff; 
-      border-radius: 40px;
-      border: 4px solid #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
       display: none; 
       z-index: 20;
       pointer-events: none;
+      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
   }
 
   /* UI共通スタイル */
@@ -105,7 +101,7 @@
   #score-board .score-text { font-size: 1.5rem; font-weight: bold; color: #ff8ba7; text-shadow: 1px 1px 0 #fff; }
   #score-label { font-size: 0.8rem; color: #8d5524; }
 
-  /* オーバーレイ画面（ロード・ゲームオーバー・横画面警告） */
+  /* オーバーレイ画面 */
   .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -118,24 +114,6 @@
   }
   #loading-screen { background: #fff8e7; z-index: 100; transition: opacity 0.5s; }
   #game-over-screen { background: rgba(255, 248, 231, 0.95); display: none; }
-  
-  /* 横画面警告 */
-  #landscape-warning {
-      position: fixed; /* 画面全体を覆う */
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: #ffb347;
-      color: white;
-      z-index: 9999;
-      display: none; /* 通常は非表示 */
-      font-weight: bold;
-      font-size: 1.5rem;
-      text-align: center;
-  }
-
-  /* 横向き（ランドスケープ）の時だけ表示 */
-  @media (orientation: landscape) {
-      #landscape-warning { display: flex; }
-  }
 
   .spinner {
       width: 40px; height: 40px;
@@ -174,10 +152,6 @@
 </head>
 <body>
 
-<div id="landscape-warning" class="overlay">
-    スマホを縦にして遊んでね！🐾
-</div>
-
 <h1>🐾 豪太GAME 🐶</h1>
 
 <div id="game-container">
@@ -209,38 +183,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  /**
-   * ==========================================
-   * CONFIG: ゲーム設定値 (整理済み)
-   * ==========================================
-   */
   const CONFIG = {
-      ASPECT_RATIO: 1.4,      // 箱の比率
-      WIDTH_PCT: 0.90,        // 画面幅の90%
-      SPAWN_Y_OFFSET: 80,     // 出現Y座標
-      DANGER_LINE_PCT: 0.2,   // 危険ライン(20%)
+      ASPECT_RATIO: 1.4,
+      WIDTH_PCT: 0.90,
+      SPAWN_Y_OFFSET: 80,
+      DANGER_LINE_PCT: 0.2,
       
-      // 物理設定 (本家再現 + 安定化)
       GRAVITY: 0.58,
       FRICTION: 0.01,
       RESTITUTION: 0.15,
       AIR_FRICTION: 0.001,
-      ITERATIONS: 10,         // 計算精度高め
+      ITERATIONS: 10,
 
-      NEXT_QUEUE_RANGE: 5,    // Lv1-5のみ出現
+      NEXT_QUEUE_RANGE: 5,
       GAME_OVER_TIME: 180,
       
-      // フルーツ設定
       SIZE_RATIOS: [0.068, 0.093, 0.125, 0.137, 0.175, 0.206, 0.237, 0.312, 0.375, 0.481, 0.600],
       BORDER_COLORS: ['#ff5252', '#ff4081', '#e040fb', '#ffab40', '#ff6e40', '#d50000', '#c6ff00', '#f48fb1', '#ffd600', '#76ff03', '#00c853'],
       IMAGES: ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png', '9.png', '10.png', '11.png']
   };
 
-  /**
-   * ==========================================
-   * STATE: 状態管理
-   * ==========================================
-   */
   const State = {
       engine: null,
       render: null,
@@ -250,7 +212,7 @@
       nextLevelIndex: 0,
       canDrop: false,
       isDragging: false,
-      touchId: null, // ▼▼▼ マルチタッチ対策用ID ▼▼▼
+      touchId: null,
       score: 0,
       gameWidth: 0,
       gameHeight: 0,
@@ -263,6 +225,7 @@
 
   const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
 
+  // DOM取得
   const DOM = {
       container: document.getElementById('game-container'),
       score: document.getElementById('score'),
@@ -274,11 +237,6 @@
       cloudChar: document.getElementById('cloud-char')
   };
 
-  /**
-   * ==========================================
-   * Audio
-   * ==========================================
-   */
   function initAudio() {
       if (!State.audioCtx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -317,14 +275,16 @@
       }
   }
 
-  /**
-   * ==========================================
-   * Setup
-   * ==========================================
-   */
+  // ▼▼▼ 修正: タイムアウト付き初期化 ▼▼▼
   async function init() {
       calculateLayout();
-      await preloadImages();
+      
+      // 画像読み込み（最大3秒待つ）
+      const timeout = new Promise(resolve => setTimeout(resolve, 3000));
+      const imageLoad = preloadImages();
+      
+      await Promise.race([imageLoad, timeout]);
+      
       setupPhysics();
       setupEvents();
       startGame();
@@ -358,10 +318,11 @@
               img.crossOrigin = "Anonymous";
               img.src = fruit.img;
               img.onload = () => {
-                  const scaleFactor = 3;
+                  // ▼▼▼ 修正: 負荷対策で2倍に変更 ▼▼▼
+                  const scaleFactor = 2; 
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
-                  const borderWidth = targetRadius * 0.05;
+                  const borderWidth = targetRadius * 0.05; // 枠5% (修正済み)
                   
                   const canvas = document.createElement('canvas');
                   canvas.width = canvasSize;
@@ -385,7 +346,8 @@
                   State.circularImages[index] = canvas.toDataURL();
                   resolve();
               };
-              img.onerror = () => resolve();
+              // エラーでも止まらないようにresolve
+              img.onerror = () => resolve(); 
           });
       });
       return Promise.all(promises);
@@ -422,57 +384,40 @@
   }
 
   function setupEvents() {
-      // ▼▼▼ スマホ特化: マルチタッチ防止ロジック ▼▼▼
-      
       const onStart = (e) => {
           initAudio();
           if (!State.canDrop || !State.currentBall || State.isGameOver) return;
-          e.preventDefault(); // ジェスチャー防止
-
-          // すでに他の指で操作中なら無視
+          e.preventDefault();
           if (State.isDragging) return;
-
-          // 最初の指を登録
           if (e.type === 'touchstart') {
               State.touchId = e.changedTouches[0].identifier;
           }
-          
           State.isDragging = true;
           moveBall(e);
       };
-
       const onMove = (e) => {
           if (!State.canDrop || !State.currentBall || !State.isDragging || State.isGameOver) return;
-          e.preventDefault(); // ジェスチャー防止
+          e.preventDefault();
           moveBall(e);
       };
-
       const onEnd = (e) => {
           if (!State.canDrop || !State.currentBall || !State.isDragging || State.isGameOver) return;
           e.preventDefault();
-          
-          // タッチの場合、登録した指が離れたかチェック
           if (e.type === 'touchend') {
-              let isTargetFinger = false;
+              let isTarget = false;
               for (let i = 0; i < e.changedTouches.length; i++) {
-                  if (e.changedTouches[i].identifier === State.touchId) {
-                      isTargetFinger = true;
-                      break;
-                  }
+                  if (e.changedTouches[i].identifier === State.touchId) { isTarget = true; break; }
               }
-              if (!isTargetFinger) return; // 違う指が離れただけなら無視
+              if (!isTarget) return;
           }
-
           State.isDragging = false;
-          State.touchId = null; // IDリセット
+          State.touchId = null;
           dropBall();
       };
 
       DOM.container.addEventListener('touchstart', onStart, { passive: false });
       DOM.container.addEventListener('touchmove', onMove, { passive: false });
       DOM.container.addEventListener('touchend', onEnd, { passive: false });
-      
-      // PC用
       DOM.container.addEventListener('mousedown', onStart);
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onEnd);
@@ -493,11 +438,6 @@
       spawnReadyBall();
   }
 
-  /**
-   * ==========================================
-   * Game Logic
-   * ==========================================
-   */
   function createFruit(x, y, index, isStatic = false) {
       const fruit = State.fruitProps[index];
       const texture = State.circularImages[index];
@@ -510,7 +450,7 @@
           frictionAir: CONFIG.AIR_FRICTION,
           density: 0.001 * (index + 1),
           render: {
-              sprite: texture ? { texture: texture, xScale: 1/3, yScale: 1/3 } : { fillStyle: fruit.color }
+              sprite: texture ? { texture: texture, xScale: 1/2, yScale: 1/2 } : { fillStyle: fruit.color }
           }
       });
   }
@@ -523,21 +463,17 @@
       World.add(State.engine.world, State.currentBall);
       
       State.canDrop = true;
-      DOM.cloudChar.style.display = 'block'; // flex -> block (画像なので)
+      DOM.cloudChar.style.display = 'block';
       updateCloudPos(State.gameWidth/2);
   }
 
   function moveBall(e) {
       let cx;
       if (e.type.startsWith('touch')) {
-          // 登録された指IDを探す
           for (let i = 0; i < e.touches.length; i++) {
-              if (e.touches[i].identifier === State.touchId) {
-                  cx = e.touches[i].clientX;
-                  break;
-              }
+              if (e.touches[i].identifier === State.touchId) { cx = e.touches[i].clientX; break; }
           }
-          if (cx === undefined) return; // 対象の指が見つからなければ無視
+          if (cx === undefined) return;
       } else {
           cx = e.clientX;
       }
@@ -587,28 +523,65 @@
   function handleCollision(event) {
       if (State.isGameOver) return;
       const pairs = event.pairs;
-      
-      // ▼▼▼ 修正: 同時合体バグ対策 ▼▼▼
-      const processedBodies = new Set(); // このフレームで処理したボディを記録
+      const processedBodies = new Set();
 
       for (let i = 0; i < pairs.length; i++) {
           const { bodyA, bodyB } = pairs[i];
-
-          // すでに処理済みならスキップ
           if (processedBodies.has(bodyA.id) || processedBodies.has(bodyB.id)) continue;
 
           if (bodyA.label.startsWith('fruit_') && bodyB.label === bodyA.label) {
               const level = parseInt(bodyA.label.split('_')[1]);
               if (level < State.fruitProps.length - 1) {
-                  
-                  // 処理済みリストに追加
                   processedBodies.add(bodyA.id);
                   processedBodies.add(bodyB.id);
-
-                  World.remove(State.engine.world, [bodyA, bodyB]);
                   
-                  // 下基準合体
+                  World.remove(State.engine.world, [bodyA, bodyB]);
                   const lower = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
                   const newBall = createFruit(lower.position.x, lower.position.y, level + 1);
                   World.add(State.engine.world, newBall);
-   
+                  
+                  playSound('merge', level);
+                  State.score += (level + 1) * 2;
+                  DOM.score.textContent = State.score;
+              }
+          }
+      }
+  }
+
+  function checkGameOver() {
+      if (State.isGameOver) return;
+      const bodies = Composite.allBodies(State.engine.world);
+      const dangerY = State.gameHeight * CONFIG.DANGER_LINE_PCT;
+      DOM.dangerLine.style.top = `${dangerY}px`;
+
+      let isDanger = false;
+      for (const body of bodies) {
+          if (!body.isStatic && body !== State.currentBall) {
+              if (body.position.y - body.circleRadius * 0.5 < dangerY) {
+                  isDanger = true;
+                  break;
+              }
+          }
+      }
+
+      if (isDanger) {
+          DOM.dangerLine.classList.add('danger-active');
+          State.dangerTimer++;
+          if (State.dangerTimer > CONFIG.GAME_OVER_TIME) {
+              State.isGameOver = true;
+              Runner.stop(State.runner);
+              DOM.finalScore.innerText = State.score;
+              DOM.gameOver.style.display = 'flex';
+          }
+      } else {
+          DOM.dangerLine.classList.remove('danger-active');
+          State.dangerTimer = 0;
+      }
+  }
+
+  // スタート (window.onloadで確実に)
+  window.onload = init;
+
+</script>
+</body>
+</html>
