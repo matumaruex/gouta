@@ -41,7 +41,7 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      width: 90vw; /* 横幅90% */
+      width: 90vw; 
       height: 70dvh; 
       max-width: 450px;
       max-height: 800px;
@@ -56,14 +56,16 @@
 
   canvas { display: block; }
 
-  /* ▼▼▼ ドクターイエロー（透明PNG版） ▼▼▼ */
+  /* ▼▼▼ ドクターイエロー（デカ・低め修正版） ▼▼▼ */
   #cloud-char {
       position: absolute;
-      top: -35px; /* 箱の上に配置 */
+      /* 位置調整: さらに下げる (-35px -> -10px) */
+      top: -10px;
       left: 50%;
       transform: translateX(-50%);
-      width: 150px; 
-      height: 75px;
+      /* サイズ調整: さらに巨大化 (150px -> 200px) */
+      width: 200px; 
+      height: 100px; /* 比率に合わせて高さも調整 */
       
       /* アップロードされた透明画像を設定 */
       background-image: url('cloud.png');
@@ -71,8 +73,6 @@
       background-repeat: no-repeat;
       background-position: center;
       
-      /* 余計な装飾（背景色や枠線）を全て削除しました */
-      /* 影だけ少しつけて立体感を出す */
       filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
       
       display: none; 
@@ -550,13 +550,11 @@
 
               if (level < fruitLevels.length - 1) {
                   World.remove(engine.world, [bodyA, bodyB]);
-
-                  // ▼▼▼ 修正: 合体時、下にある方の位置に生成（浮き防止） ▼▼▼
+                  // 下基準合体
                   const lowerBody = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
                   const newX = lowerBody.position.x;
                   const newY = lowerBody.position.y;
-                  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+                  
                   const newBall = createFruit(newX, newY, level + 1);
                   World.add(engine.world, newBall);
                   
@@ -611,3 +609,4 @@
 </script>
 </body>
 </html>
+
