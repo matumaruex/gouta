@@ -41,8 +41,9 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      /* JSで本家比率(1:1.4)に強制リサイズします */
+      /* ▼▼▼ 修正: 幅90%に変更（端っこ操作対策） ▼▼▼ */
       width: 90vw; 
+      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
       height: 70dvh; 
       max-width: 450px;
       max-height: 800px;
@@ -56,13 +57,13 @@
 
   canvas { display: block; }
 
-  /* ▼▼▼ 雲キャラクター ▼▼▼ */
+  /* ▼▼▼ 雲キャラクター（CSS描画） ▼▼▼ */
   #cloud-char {
       position: absolute;
-      /* 箱の上部5%の位置に配置 */
-      top: 5%; 
+      /* 箱の上端から少し上にはみ出させる */
+      top: -30px;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       width: 80px; height: 50px;
       background: #fff;
       border-radius: 50px;
@@ -324,7 +325,9 @@
 
   // --- 1. 画面サイズ計算 (本家比率 1:1.4) ---
   function calculateGameSize() {
-      const maxWidth = Math.min(window.innerWidth * 0.95, 450);
+      // ▼▼▼ 修正: 枠幅90%に変更（端っこ対策） ▼▼▼
+      const maxWidth = Math.min(window.innerWidth * 0.90, 450);
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
       const maxHeight = window.innerHeight * 0.85;
 
       // 黄金比率 1 : 1.4
@@ -339,10 +342,9 @@
       gameWidth = w;
       gameHeight = h;
       
-      // 出現位置は上から5%
-      spawnY = gameHeight * 0.05;
-      // 雲の表示位置調整
-      cloudChar.style.top = `${spawnY}px`;
+      // ▼▼▼ 修正: 出現位置を雲の下あたりに下げる ▼▼▼
+      spawnY = 80; 
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       container.style.width = `${gameWidth}px`;
       container.style.height = `${gameHeight}px`;
