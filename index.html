@@ -3,23 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<title>豪太Game 🚂💨✋</title>
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;900&display=swap" rel="stylesheet">
+<title>豪太GAME 🐾</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* ▼▼▼ デザイン設定：相撲と電車の融合 ▼▼▼ */
+  /* ▼▼▼ デザイン設定 ▼▼▼ */
   body {
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
-    /* 土俵の砂の色 */
-    background-color: #f4ebd0;
-    /* 線路のイメージ（枕木）を背景パターンに */
-    background-image: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 19px,
-      #d7ccc8 19px,
-      #d7ccc8 20px
-    );
+    background-color: #fff8e7;
+    background-image: radial-gradient(#fff0d0 10%, transparent 10%);
+    background-size: 20px 20px;
     overflow: hidden;
     touch-action: none;
     display: flex;
@@ -27,33 +20,26 @@
     align-items: center;
     justify-content: center;
     height: 100dvh;
-    color: #3e2723;
+    color: #5a4a42;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
 
   h1 { 
     margin: 10px 0; 
-    font-size: 1.5rem; 
-    /* 電車ブルーと相撲レッド */
-    background: linear-gradient(to right, #1a237e, #c62828);
-    -webkit-background-clip: text;
-    color: transparent;
-    text-shadow: 2px 2px 0 rgba(255,255,255,0.5);
+    font-size: 1.4rem; 
+    color: #8d5524;
+    text-shadow: 2px 2px 0 #fff;
     flex-shrink: 0;
     pointer-events: none;
-    font-weight: 900;
-    letter-spacing: 2px;
   }
 
   #game-container {
       position: relative;
-      /* 土俵の「徳俵」をイメージした濃い茶色の枠 */
-      border: 8px solid #5d4037;
+      border: 6px solid #e6cba8;
       border-radius: 20px;
-      background: rgba(255, 255, 255, 0.9);
-      /* 踏切のような縞模様の影 */
-      box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 8px 20px rgba(141, 85, 36, 0.2);
       overflow: hidden;
       touch-action: none;
   }
@@ -63,110 +49,84 @@
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
-      width: 65px; height: 75px;
+      width: 60px; height: 70px;
       background: #fff;
-      /* 電車の窓枠のようなデザイン */
-      border: 4px solid #3949ab;
-      border-radius: 10px;
+      border: 3px solid #ffb347;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 0 #1a237e;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       pointer-events: none;
       z-index: 10;
   }
-  #next-label { 
-      font-size: 11px; 
-      font-weight: 900; 
-      background: #ffeb3b; /* 警告色 */
-      color: #000;
-      padding: 1px 6px;
-      border-radius: 4px;
-      margin-bottom: 4px;
-  }
+  #next-label { font-size: 10px; font-weight: bold; color: #ffb347; margin-bottom: 2px; }
   #next-ball-preview {
-      width: 40px; height: 40px;
+      width: 35px; height: 35px;
       border-radius: 50%;
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      border: 2px solid #f4ebd0;
+      border: 2px solid #fff8e7;
   }
 
   #score-board {
       position: absolute;
       top: 10px; left: 15px;
-      font-size: 1.8rem;
-      font-weight: 900;
-      color: #c62828; /* 番付表のような赤 */
-      text-shadow: 2px 2px 0 #fff;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #ff8ba7;
+      text-shadow: 1px 1px 0 #fff;
       pointer-events: none;
       z-index: 10;
-      transform: rotate(-2deg); /* 勢いをつける */
   }
-  #score-label { 
-      font-size: 0.9rem; 
-      color: #3e2723; 
-      background: #fff;
-      padding: 0 5px;
-      border: 2px solid #3e2723;
-  }
+  #score-label { font-size: 0.8rem; color: #8d5524; }
 
   #loading-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: #f4ebd0;
+      background: #fff8e7;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 100;
-      font-weight: bold;
-      color: #5d4037;
+      transition: opacity 0.5s;
   }
   .spinner {
-      width: 50px; height: 50px;
-      border: 6px solid #d7ccc8;
-      border-top: 6px solid #c62828; /* 赤 */
-      border-left: 6px solid #1a237e; /* 青 */
+      width: 40px; height: 40px;
+      border: 5px solid #e6cba8;
+      border-top: 5px solid #ffb347;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 15px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
   }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
   #game-over-screen {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(244, 235, 208, 0.95);
+      background: rgba(255, 248, 231, 0.9);
       display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 50;
   }
-  #game-over-title { 
-      font-size: 2.5rem; 
-      color: #c62828; 
-      margin-bottom: 10px; 
-      font-weight: 900;
-      text-shadow: 3px 3px 0 #fff;
-  }
+  #game-over-title { font-size: 2rem; color: #ff7f7f; margin-bottom: 20px; font-weight: bold; }
   #retry-btn {
-      padding: 15px 50px;
-      font-size: 1.4rem;
-      background: #1a237e; /* 紺色 */
-      color: #fff;
-      border: 4px solid #fff;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      background: #ffb347;
+      color: white;
+      border: none;
       border-radius: 50px;
       cursor: pointer;
       font-family: 'M PLUS Rounded 1c', sans-serif;
-      font-weight: 900;
-      box-shadow: 0 6px 0 #000051;
-      transition: transform 0.1s;
+      box-shadow: 0 4px 0 #e5a23d;
   }
-  #retry-btn:active { transform: translateY(6px); box-shadow: none; }
+  #retry-btn:active { transform: translateY(4px); box-shadow: none; }
 
   #danger-line {
       position: absolute;
@@ -174,41 +134,40 @@
       left: 0;
       width: 100%;
       height: 0;
-      border-top: 4px dotted rgba(255, 0, 0, 0.4);
+      border-top: 3px dotted rgba(255, 100, 100, 0.4);
       pointer-events: none;
       z-index: 5;
+      transition: border-color 0.2s;
   }
   .danger-active {
-      border-top: 4px solid #ff0000 !important;
+      border-top: 3px solid rgba(255, 0, 0, 1) !important;
   }
 
 </style>
 </head>
 <body>
 
-<h1>🚂 豪太Game ✋</h1>
+<h1>🐾 豪太GAME 🐶</h1>
 
 <div id="game-container">
     <div id="loading-screen">
         <div class="spinner"></div>
-        <div>はっけよい...準備中！</div>
+        <div>準備中だワン...✂️</div>
     </div>
 
     <div id="game-over-screen">
-        <div id="game-over-title">勝負あり！</div>
-        <div style="font-size: 1.5rem; margin-bottom: 30px; font-weight: bold; color:#5d4037;">
-            決まり手: <span id="final-score" style="font-size: 2rem; color:#c62828;">0</span> 点
-        </div>
-        <button id="retry-btn" onclick="location.reload()">もう一番！</button>
+        <div id="game-over-title">GAME OVER</div>
+        <div style="font-size: 1.5rem; margin-bottom: 20px;">Score: <span id="final-score">0</span></div>
+        <button id="retry-btn" onclick="location.reload()">もう一度！</button>
     </div>
 
     <div id="score-board">
-        <span id="score-label">番付</span><br>
+        <span id="score-label">Score</span><br>
         <span id="score">0</span>
     </div>
     
     <div id="next-area">
-        <div id="next-label">次はコレ</div>
+        <div id="next-label">NEXT</div>
         <div id="next-ball-preview"></div>
     </div>
     
@@ -218,14 +177,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ サイズ比率（変更なし） ▼▼▼
+  // ▼▼▼ サイズ比率設定（本家仕様） ▼▼▼
   const SIZE_RATIOS = [
-      0.10, 0.13, 0.16, 0.19, 0.23, 
-      0.28, 0.33, 0.40, 0.48, 0.53, 0.58
+      0.10, // Lv1: さくらんぼ (10%)
+      0.13, // Lv2: いちご
+      0.16, // Lv3: ぶどう
+      0.19, // Lv4: デコポン
+      0.23, // Lv5: かき
+      0.28, // Lv6: りんご
+      0.33, // Lv7: なし
+      0.40, // Lv8: もも
+      0.48, // Lv9: パイナップル
+      0.53, // Lv10: メロン
+      0.58  // Lv11: スイカ
   ];
 
-  // ▼▼▼ 画像ファイル名を 1.png 〜 11.png に指定 ▼▼▼
-  // ※ 全部豪太くんの画像を用意してください
   const FRUIT_IMAGES = [
       '1.png', '2.png', '3.png', '4.png', '5.png', '6.png', 
       '7.png', '8.png', '9.png', '10.png', '11.png'
@@ -235,8 +201,8 @@
 
   let engine, render, runner;
   let currentBall = null;
-  let currLevelIndex = 0; 
-  let nextLevelIndex = 0; 
+  let currLevelIndex = 0; // 手元
+  let nextLevelIndex = 0; // 次
   
   let canDrop = false;
   let isDragging = false;
@@ -256,7 +222,7 @@
   const finalScoreEl = document.getElementById('final-score');
   const dangerLineEl = document.getElementById('danger-line');
 
-  // --- 画面サイズ計算 ---
+  // --- 1. 画面サイズ計算 (2:3) ---
   function calculateGameSize() {
       const maxWidth = Math.min(window.innerWidth * 0.95, 450);
       const maxHeight = window.innerHeight * 0.85;
@@ -284,13 +250,14 @@
       });
   }
 
-  // --- 画像処理 ---
+  // --- 2. 画像処理（高画質化） ---
   async function preloadAndCropImages() {
       calculateGameSize();
 
       const promises = fruitLevels.map((fruit, index) => {
           return new Promise((resolve) => {
               const img = new Image();
+              img.crossOrigin = "Anonymous";
               img.src = fruit.img;
               
               img.onload = () => {
@@ -318,7 +285,6 @@
                   resolve();
               };
               img.onerror = () => {
-                  // 画像がない場合はエラーにならず、ただの色の玉になるように
                   circularImages[index] = null;
                   resolve();
               };
@@ -334,10 +300,12 @@
       }, 500);
   }
 
-  // --- ゲーム初期化 ---
+  // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 0.8; 
+      // ▼▼▼ 重力を 0.5 (かなりふわっと) に設定 ▼▼▼
+      engine.world.gravity.y = 0.5; 
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       render = Render.create({
           element: container,
@@ -353,7 +321,7 @@
 
       const wallThickness = 500;
       const walls = [
-          Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#5d4037' } }),
+          Bodies.rectangle(gameWidth/2, gameHeight + wallThickness/2, gameWidth + wallThickness*2, wallThickness, { isStatic: true, render: { fillStyle: '#e6cba8' } }),
           Bodies.rectangle(-wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } }),
           Bodies.rectangle(gameWidth + wallThickness/2, gameHeight/2, wallThickness, gameHeight*2, { isStatic: true, render: { opacity: 0 } })
       ];
@@ -366,15 +334,14 @@
       Events.on(engine, 'collisionStart', handleCollision);
       Events.on(engine, 'afterUpdate', checkGameOver);
 
-      // 出現はLv1〜Lv5
       currLevelIndex = Math.floor(Math.random() * 5);
       nextLevelIndex = Math.floor(Math.random() * 5);
       
-      updateNextView(); 
-      spawnReadyBall(); 
+      updateNextView();
+      spawnReadyBall();
   }
 
-  // --- ボール作成 ---
+  // --- 4. ボール作成 ---
   function createFruit(x, y, index, isStatic = false) {
       const fruit = fruitLevels[index];
       const texture = circularImages[index];
@@ -390,12 +357,11 @@
                   texture: texture,
                   xScale: 1 / 3, 
                   yScale: 1 / 3
-              } : { fillStyle: '#c62828' } // 画像がない場合は赤色
+              } : { fillStyle: '#ffb347' } 
           }
       });
   }
 
-  // --- NEXT更新 ---
   function updateNextView() {
       const texture = circularImages[nextLevelIndex];
       if (texture) {
@@ -403,7 +369,7 @@
           nextPreviewEl.style.backgroundColor = 'transparent';
       } else {
           nextPreviewEl.style.backgroundImage = 'none';
-          nextPreviewEl.style.backgroundColor = '#c62828';
+          nextPreviewEl.style.backgroundColor = '#ffb347';
       }
   }
 
@@ -416,7 +382,8 @@
       isDragging = false;
   }
 
-  // --- 操作 ---
+  // --- 5. 操作 ---
+  
   const handleStart = (e) => {
       if (!canDrop || !currentBall || isGameOver) return;
       e.preventDefault();
@@ -474,7 +441,7 @@
   window.addEventListener('mousemove', handleMove);
   window.addEventListener('mouseup', handleEnd);
 
-  // --- 合体 ---
+  // --- 6. 合体 ---
   function handleCollision(event) {
       if (isGameOver) return;
       const pairs = event.pairs;
@@ -501,12 +468,12 @@
       }
   }
 
-  // --- ゲームオーバー ---
+  // --- 7. ゲームオーバー判定 ---
   function checkGameOver() {
       if (isGameOver) return;
 
       const bodies = Composite.allBodies(engine.world);
-      const dangerY = 100; 
+      const dangerY = 100;
       let isDanger = false;
 
       for (const body of bodies) {
