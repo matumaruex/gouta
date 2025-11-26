@@ -6,7 +6,7 @@
 <title>豪太GAME 🐾</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* ▼▼▼ CSS: デザイン設定 ▼▼▼ */
+  /* ▼▼▼ デザイン設定 ▼▼▼ */
   body {
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
@@ -37,6 +37,7 @@
     z-index: 10;
   }
 
+  /* ゲーム枠 */
   #game-container {
       position: relative;
       width: 90vw; 
@@ -53,10 +54,10 @@
 
   canvas { display: block; }
 
-  /* ドクターイエロー雲 */
+  /* ドクターイエロー雲 (透明PNG) */
   #cloud-char {
       position: absolute;
-      top: -15px;
+      top: -35px;
       left: 50%;
       transform: translateX(-50%);
       width: 150px; 
@@ -65,10 +66,27 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      /* 透明PNGなのでCSS加工なし */
+      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
       display: none; 
       z-index: 20;
       pointer-events: none;
-      filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+  }
+
+  /* 衝撃波エフェクト */
+  .shockwave {
+      position: absolute;
+      border-radius: 50%;
+      border: 4px solid rgba(255, 255, 255, 0.8);
+      background: transparent;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: pop 0.4s ease-out forwards;
+      z-index: 5;
+  }
+  @keyframes pop {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; border-width: 10px; }
+      100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; border-width: 0px; }
   }
 
   /* UI共通スタイル */
@@ -183,49 +201,45 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
+  /**
+   * ==========================================
+   * CONFIG: ゲーム設定 (Final Mix)
+   * ==========================================
+   */
   const CONFIG = {
-      ASPECT_RATIO: 1.4,
-      WIDTH_PCT: 0.90,
-      SPAWN_Y_OFFSET: 80,
-      DANGER_LINE_PCT: 0.2,
+      ASPECT_RATIO: 1.4,      // 箱の比率 1:1.4 (本家仕様)
+      WIDTH_PCT: 0.90,        // 幅90% (端っこ対策)
+      SPAWN_Y_OFFSET: 80,     // 出現Y座標
+      DANGER_LINE_PCT: 0.2,   // 危険ライン(20%)
       
+      // 物理設定 (本家再現・密度自動計算)
       GRAVITY: 0.58,
-      FRICTION: 0.01,
-      RESTITUTION: 0.15,
+      FRICTION: 0.01,         // ツルツル
+      RESTITUTION: 0.15,      // 低反発
       AIR_FRICTION: 0.001,
-      ITERATIONS: 10,
+      ITERATIONS: 10,         // 精度
 
-      NEXT_QUEUE_RANGE: 5,
+      NEXT_QUEUE_RANGE: 5,    // Lv1-5のみ出現
       GAME_OVER_TIME: 180,
       
+      // 本家サイズ比率 (6.8% - 60%)
       SIZE_RATIOS: [0.068, 0.093, 0.125, 0.137, 0.175, 0.206, 0.237, 0.312, 0.375, 0.481, 0.600],
+      // 11色カラー枠
       BORDER_COLORS: ['#ff5252', '#ff4081', '#e040fb', '#ffab40', '#ff6e40', '#d50000', '#c6ff00', '#f48fb1', '#ffd600', '#76ff03', '#00c853'],
       IMAGES: ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png', '9.png', '10.png', '11.png']
   };
 
   const State = {
-      engine: null,
-      render: null,
-      runner: null,
-      currentBall: null,
-      currLevelIndex: 0,
-      nextLevelIndex: 0,
-      canDrop: false,
-      isDragging: false,
-      touchId: null,
-      score: 0,
-      gameWidth: 0,
-      gameHeight: 0,
-      isGameOver: false,
-      dangerTimer: 0,
-      audioCtx: null,
-      circularImages: {},
-      fruitProps: []
+      engine: null, render: null, runner: null,
+      currentBall: null, currLevelIndex: 0, nextLevelIndex: 0,
+      canDrop: false, isDragging: false, touchId: null,
+      score: 0, gameWidth: 0, gameHeight: 0,
+      isGameOver: false, dangerTimer: 0,
+      audioCtx: null, circularImages: {}, fruitProps: []
   };
 
   const { Engine, Render, Runner, World, Bodies, Body, Events, Composite } = Matter;
 
-  // DOM取得
   const DOM = {
       container: document.getElementById('game-container'),
       score: document.getElementById('score'),
@@ -237,14 +251,13 @@
       cloudChar: document.getElementById('cloud-char')
   };
 
+  // --- Audio (Type B: Bright) ---
   function initAudio() {
       if (!State.audioCtx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
           State.audioCtx = new AudioContext();
       }
-      if (State.audioCtx.state === 'suspended') {
-          State.audioCtx.resume();
-      }
+      if (State.audioCtx.state === 'suspended') State.audioCtx.resume();
   }
 
   function playSound(type, level = 0) {
@@ -257,34 +270,28 @@
 
       if (type === 'drop') {
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(600, now);
-          osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+          osc.frequency.setValueAtTime(800, now); // 高め
+          osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
           gain.gain.setValueAtTime(0.1, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-          osc.start(now);
-          osc.stop(now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
       } else if (type === 'merge') {
           osc.type = 'triangle';
-          const baseFreq = 500 + (level * 100);
+          const baseFreq = 440 + (level * 80); // 明るい和音感
           osc.frequency.setValueAtTime(baseFreq, now);
-          osc.frequency.linearRampToValueAtTime(baseFreq + 200, now + 0.1);
+          osc.frequency.linearRampToValueAtTime(baseFreq * 1.5, now + 0.1);
           gain.gain.setValueAtTime(0.1, now);
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-          osc.start(now);
-          osc.stop(now + 0.2);
+          osc.start(now); osc.stop(now + 0.2);
       }
   }
 
-  // ▼▼▼ 修正: タイムアウト付き初期化 ▼▼▼
+  // --- Initialize ---
   async function init() {
       calculateLayout();
-      
-      // 画像読み込み（最大3秒待つ）
       const timeout = new Promise(resolve => setTimeout(resolve, 3000));
       const imageLoad = preloadImages();
-      
       await Promise.race([imageLoad, timeout]);
-      
       setupPhysics();
       setupEvents();
       startGame();
@@ -318,11 +325,10 @@
               img.crossOrigin = "Anonymous";
               img.src = fruit.img;
               img.onload = () => {
-                  // ▼▼▼ 修正: 負荷対策で2倍に変更 ▼▼▼
-                  const scaleFactor = 2; 
+                  const scaleFactor = 3; 
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
-                  const borderWidth = targetRadius * 0.05; // 枠5% (修正済み)
+                  const borderWidth = targetRadius * 0.05; // 枠5%
                   
                   const canvas = document.createElement('canvas');
                   canvas.width = canvasSize;
@@ -346,7 +352,6 @@
                   State.circularImages[index] = canvas.toDataURL();
                   resolve();
               };
-              // エラーでも止まらないようにresolve
               img.onerror = () => resolve(); 
           });
       });
@@ -426,14 +431,11 @@
   function startGame() {
       DOM.loading.style.opacity = 0;
       setTimeout(() => DOM.loading.style.display = 'none', 500);
-
       Render.run(State.render);
       State.runner = Runner.create();
       Runner.run(State.runner, State.engine);
-
       State.currLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
       State.nextLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
-      
       updateNextView();
       spawnReadyBall();
   }
@@ -441,27 +443,24 @@
   function createFruit(x, y, index, isStatic = false) {
       const fruit = State.fruitProps[index];
       const texture = State.circularImages[index];
-
+      // 密度設定を削除（自動計算 = 面積比例）
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
           restitution: CONFIG.RESTITUTION,
           friction: CONFIG.FRICTION,
           frictionAir: CONFIG.AIR_FRICTION,
-          density: 0.001 * (index + 1),
           render: {
-              sprite: texture ? { texture: texture, xScale: 1/2, yScale: 1/2 } : { fillStyle: fruit.color }
+              sprite: texture ? { texture: texture, xScale: 1/3, yScale: 1/3 } : { fillStyle: fruit.color }
           }
       });
   }
 
   function spawnReadyBall() {
       if (State.currentBall || State.isGameOver) return;
-      
       State.currentBall = createFruit(State.gameWidth/2, CONFIG.SPAWN_Y_OFFSET, State.currLevelIndex, true);
       State.currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 };
       World.add(State.engine.world, State.currentBall);
-      
       State.canDrop = true;
       DOM.cloudChar.style.display = 'block';
       updateCloudPos(State.gameWidth/2);
@@ -474,14 +473,11 @@
               if (e.touches[i].identifier === State.touchId) { cx = e.touches[i].clientX; break; }
           }
           if (cx === undefined) return;
-      } else {
-          cx = e.clientX;
-      }
+      } else { cx = e.clientX; }
 
       const rect = DOM.container.getBoundingClientRect();
       const x = cx - rect.left;
       const fruit = State.fruitProps[State.currLevelIndex];
-      
       const minX = fruit.radius + 2;
       const maxX = State.gameWidth - fruit.radius - 2;
       const clampedX = Math.max(minX, Math.min(maxX, x));
@@ -501,10 +497,8 @@
       State.currentBall = null;
       State.canDrop = false;
       DOM.cloudChar.style.display = 'none';
-
       State.currLevelIndex = State.nextLevelIndex;
       State.nextLevelIndex = Math.floor(Math.random() * CONFIG.NEXT_QUEUE_RANGE);
-      
       updateNextView();
       setTimeout(spawnReadyBall, 600);
   }
@@ -518,6 +512,18 @@
           DOM.nextPreview.style.backgroundImage = 'none';
           DOM.nextPreview.style.backgroundColor = '#ffb347';
       }
+  }
+
+  // ▼▼▼ エフェクト生成関数 ▼▼▼
+  function createShockwave(x, y, radius) {
+      const wave = document.createElement('div');
+      wave.className = 'shockwave';
+      wave.style.left = `${x}px`;
+      wave.style.top = `${y}px`;
+      wave.style.width = `${radius * 2}px`;
+      wave.style.height = `${radius * 2}px`;
+      DOM.container.appendChild(wave);
+      setTimeout(() => wave.remove(), 400);
   }
 
   function handleCollision(event) {
@@ -534,14 +540,19 @@
               if (level < State.fruitProps.length - 1) {
                   processedBodies.add(bodyA.id);
                   processedBodies.add(bodyB.id);
-                  
                   World.remove(State.engine.world, [bodyA, bodyB]);
+                  
                   const lower = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
                   const newBall = createFruit(lower.position.x, lower.position.y, level + 1);
                   World.add(State.engine.world, newBall);
                   
+                  // エフェクトと音
+                  createShockwave(lower.position.x, lower.position.y, newBall.circleRadius);
                   playSound('merge', level);
-                  State.score += (level + 1) * 2;
+                  
+                  // 本家スコア計算（三角数）
+                  const pts = (level + 1) * (level + 2) / 2;
+                  State.score += pts;
                   DOM.score.textContent = State.score;
               }
           }
@@ -579,7 +590,6 @@
       }
   }
 
-  // スタート (window.onloadで確実に)
   window.onload = init;
 
 </script>
