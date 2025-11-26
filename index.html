@@ -11,9 +11,8 @@
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
     background-color: #fff8e7;
-    /* ▼▼▼ 修正: bg.jpg に変更 ▼▼▼ */
+    /* 背景画像を bg.jpg に設定 */
     background-image: url('bg.jpg');
-    /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
@@ -42,8 +41,9 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      width: 88vw; 
-      height: 75dvh; 
+      /* JSでサイズ制御するが、初期値として */
+      width: 90vw; 
+      height: 70dvh; 
       max-width: 450px;
       max-height: 800px;
       border: 6px solid #e6cba8;
@@ -192,19 +192,28 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 本家再現サイズ比率 ▼▼▼
+  // ▼▼▼ 【本家完全解析】サイズ比率 (直径) ▼▼▼
+  // 画面幅100に対してのサイズ。Lv1は極小、Lv11は巨大。
   const SIZE_RATIOS = [
-      0.10, // Lv1: さくらんぼ (10%)
-      0.13, // Lv2: いちご
-      0.16, // Lv3: ぶどう
-      0.19, // Lv4: デコポン
-      0.23, // Lv5: かき
-      0.28, // Lv6: りんご
-      0.33, // Lv7: なし
-      0.40, // Lv8: もも
-      0.48, // Lv9: パイナップル
-      0.53, // Lv10: メロン
-      0.58  // Lv11: スイカ (58%)
+      0.05, // Lv1: さくらんぼ (5%) ← 激狭隙間に入る！
+      0.07, // Lv2: いちご (7%)
+      0.09, // Lv3: ぶどう (9%)
+      0.12, // Lv4: デコポン
+      0.15, // Lv5: かき
+      0.20, // Lv6: りんご
+      0.25, // Lv7: なし
+      0.30, // Lv8: もも
+      0.40, // Lv9: パイナップル
+      0.50, // Lv10: メロン (画面の半分)
+      0.60  // Lv11: スイカ (画面の6割！)
+  ];
+
+  // ▼▼▼ レベル別カラー枠の設定 ▼▼▼
+  const BORDER_COLORS = [
+      '#4fc3f7', '#4fc3f7', '#4fc3f7', // Lv1-3: 水色系
+      '#aed581', '#aed581', '#aed581', '#aed581', // Lv4-7: 黄緑系
+      '#ffb74d', '#ffb74d', '#ffb74d', // Lv8-10: オレンジ系
+      '#ffd700'  // Lv11: ゴールド
   ];
 
   const FRUIT_IMAGES = [
@@ -216,8 +225,8 @@
 
   let engine, render, runner;
   let currentBall = null;
-  let currLevelIndex = 0; // 手元
-  let nextLevelIndex = 0; // 次
+  let currLevelIndex = 0; 
+  let nextLevelIndex = 0; 
   
   let canDrop = false;
   let isDragging = false;
@@ -225,6 +234,9 @@
   let gameWidth, gameHeight;
   let isGameOver = false;
   let dangerTimer = 0;
+  
+  // オーディオコンテキスト（効果音用）
+  let audioCtx = null;
   
   let fruitLevels = [];
   const circularImages = {}; 
@@ -237,17 +249,63 @@
   const finalScoreEl = document.getElementById('final-score');
   const dangerLineEl = document.getElementById('danger-line');
 
-  // --- 1. 画面サイズ計算 (端っこ余白確保 & 黄金比2:3) ---
+  // --- 0. 効果音システム (Web Audio API) ---
+  function initAudio() {
+      if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+      }
+  }
+
+  function playSound(type, level = 0) {
+      if (!audioCtx) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'drop') {
+          // 落とした時の音（低めのポンッ）
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          osc.start(now);
+          osc.stop(now + 0.1);
+      } else if (type === 'merge') {
+          // 合体した時の音（レベルが高いほど高い音）
+          osc.type = 'triangle';
+          const baseFreq = 400 + (level * 50);
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 2, now + 0.1);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+      }
+  }
+
+  // --- 1. 画面サイズ計算 (本家比率: 少し縦長だが、正方形に近い箱) ---
   function calculateGameSize() {
+      // 画面の88%幅
       const maxWidth = Math.min(window.innerWidth * 0.88, 450);
       const maxHeight = window.innerHeight * 0.85;
 
+      // 本家の箱の比率は 1 : 1.35 くらい（少しずんぐり）
+      // 天井を低くして難易度を上げる
       let w = maxWidth;
-      let h = w * 1.5; 
+      let h = w * 1.35; 
 
       if (h > maxHeight) {
           h = maxHeight;
-          w = h / 1.5;
+          w = h / 1.35;
       }
 
       gameWidth = w;
@@ -260,12 +318,13 @@
           return {
               level: index + 1,
               radius: (gameWidth * ratio) / 2,
-              img: FRUIT_IMAGES[index]
+              img: FRUIT_IMAGES[index],
+              color: BORDER_COLORS[index]
           };
       });
   }
 
-  // --- 2. 画像処理（高画質化 3倍ズーム） ---
+  // --- 2. 画像処理（高画質化 & カラー枠） ---
   async function preloadAndCropImages() {
       calculateGameSize();
 
@@ -285,16 +344,24 @@
                   canvas.height = canvasSize;
                   const ctx = canvas.getContext('2d');
 
+                  // 1. 円形で切り抜く
                   ctx.beginPath();
                   ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2, 0, Math.PI * 2);
                   ctx.closePath();
                   ctx.clip(); 
 
+                  // 2. 画像を描画
                   const sourceSize = Math.min(img.width, img.height);
                   const sx = (img.width - sourceSize) / 2;
                   const sy = (img.height - sourceSize) / 2;
-
                   ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, canvasSize, canvasSize);
+
+                  // 3. 【新機能】カラー枠を描画
+                  ctx.beginPath();
+                  ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2 - 15, 0, Math.PI * 2); // 少し内側に
+                  ctx.lineWidth = 30; // 3倍解像度なので太くする
+                  ctx.strokeStyle = fruit.color;
+                  ctx.stroke();
 
                   circularImages[index] = canvas.toDataURL();
                   resolve();
@@ -318,10 +385,9 @@
   // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      // ▼▼▼ 【本家物理設定】重力0.58 ▼▼▼
+      // ▼▼▼ 【物理調整】重力0.58, 少しツルツルに ▼▼▼
       engine.world.gravity.y = 0.58; 
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+      
       render = Render.create({
           element: container,
           engine: engine,
@@ -349,8 +415,7 @@
       Events.on(engine, 'collisionStart', handleCollision);
       Events.on(engine, 'afterUpdate', checkGameOver);
 
-      // 手元とNEXTの抽選
-      currLevelIndex = Math.floor(Math.random() * 5); // Lv1〜Lv5
+      currLevelIndex = Math.floor(Math.random() * 5); // Lv1-5
       nextLevelIndex = Math.floor(Math.random() * 5);
       
       updateNextView();
@@ -365,18 +430,16 @@
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
-          // ▼▼▼ 【本家物理設定】反発0.15, 摩擦0.01(ツルツル) ▼▼▼
-          restitution: 0.15, 
-          friction: 0.01,
+          restitution: 0.15, // 跳ねすぎない
+          friction: 0.01,    // ツルツル（滑り込む）
           frictionAir: 0.001,
-          density: 0.001 * (index + 1), // 大きいほど重くする
-          // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+          density: 0.001 * (index + 1), // 重い
           render: {
               sprite: texture ? {
                   texture: texture,
                   xScale: 1 / 3, 
                   yScale: 1 / 3
-              } : { fillStyle: '#ffb347' } 
+              } : { fillStyle: fruit.color } 
           }
       });
   }
@@ -404,6 +467,9 @@
   // --- 5. 操作 ---
   
   const handleStart = (e) => {
+      // 最初のタッチでオーディオを有効化
+      initAudio();
+      
       if (!canDrop || !currentBall || isGameOver) return;
       e.preventDefault();
       isDragging = true;
@@ -441,13 +507,14 @@
   }
 
   function dropBall() {
+      playSound('drop'); // 効果音
       Body.setStatic(currentBall, false);
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
       currentBall = null;
       canDrop = false;
 
       currLevelIndex = nextLevelIndex;
-      nextLevelIndex = Math.floor(Math.random() * 5);
+      nextLevelIndex = Math.floor(Math.random() * 5); 
       
       updateNextView();
       setTimeout(spawnReadyBall, 600);
@@ -478,6 +545,8 @@
                   World.remove(engine.world, [bodyA, bodyB]);
                   const newBall = createFruit(midX, midY, level + 1);
                   World.add(engine.world, newBall);
+                  
+                  playSound('merge', level); // 合体音（レベルで高さが変わる）
 
                   score += (level + 1) * 2;
                   scoreEl.textContent = score;
