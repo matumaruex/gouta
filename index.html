@@ -41,50 +41,54 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      width: 90vw; 
+      width: 90vw; /* 横幅90% */
       height: 70dvh; 
       max-width: 450px;
       max-height: 800px;
       border: 6px solid #e6cba8;
       border-radius: 20px;
-      /* ▼▼▼ 修正: 透明度を上げて背景を見やすく (0.5) ▼▼▼ */
+      /* 背景を見せるために半透明 */
       background: rgba(255, 255, 255, 0.5);
-      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-      overflow: visible; 
+      overflow: visible; /* ドクターイエローがはみ出るのでvisible */
       touch-action: none;
   }
 
   canvas { display: block; }
 
-  /* 雲キャラクター */
+  /* ▼▼▼ ドクターイエロー雲（修正版） ▼▼▼ */
   #cloud-char {
       position: absolute;
-      top: -30px;
+      top: -35px; /* 箱の上に配置 */
       left: 50%;
       transform: translateX(-50%);
-      width: 80px; height: 50px;
-      background: #fff;
-      border-radius: 50px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      width: 120px; /* 横長に調整 */
+      height: 60px;
+      
+      /* 画像を設定 */
+      background-image: url('cloud.jpg');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      
+      /* ▼ 白い背景を透明に見せる魔法 ▼ */
+      mix-blend-mode: multiply; 
+      filter: contrast(1.2) brightness(1.05); /* 白飛びさせて境界を消す */
+      
       display: none; 
       z-index: 20;
       pointer-events: none;
   }
-  #cloud-char::before, #cloud-char::after {
-      content: ''; position: absolute; background: #fff; border-radius: 50%;
-  }
-  #cloud-char::before { width: 40px; height: 40px; top: -15px; left: 10px; }
-  #cloud-char::after { width: 35px; height: 35px; top: -10px; right: 10px; }
+  /* 古いCSS雲の装飾を削除 */
+  #cloud-char::before, #cloud-char::after { content: none; }
+  /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
 
   /* NEXT表示 */
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
       width: 60px; height: 70px;
-      /* ▼▼▼ 修正: NEXTも箱と同じ透明度に ▼▼▼ */
-      background: rgba(255, 255, 255, 0.5);
-      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+      background: rgba(255, 255, 255, 0.5); /* 半透明 */
       border: 3px solid #ffb347;
       border-radius: 12px;
       display: flex;
@@ -218,7 +222,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 本家完全一致サイズ比率 ▼▼▼
+  // ▼▼▼ 本家完全一致サイズ比率 (直径) ▼▼▼
   const SIZE_RATIOS = [
       0.068, 0.093, 0.125, 0.137, 0.175, 0.206, 0.237, 0.312, 0.375, 0.481, 0.600
   ];
@@ -388,10 +392,10 @@
   function initGame() {
       engine = Engine.create();
       engine.world.gravity.y = 0.58; 
-      // ▼▼▼ 修正: 物理演算の精度を上げて「めり込み」を防ぐ ▼▼▼
-      engine.positionIterations = 10; // 標準6 -> 10 (硬くなる)
-      engine.velocityIterations = 10; // 標準4 -> 10
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+      // ▼▼▼ 物理演算精度強化 ▼▼▼
+      engine.positionIterations = 10; 
+      engine.velocityIterations = 10; 
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       render = Render.create({
           element: container,
@@ -548,11 +552,15 @@
               const level = parseInt(bodyA.label.split('_')[1]);
 
               if (level < fruitLevels.length - 1) {
-                  const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                  const midY = (bodyA.position.y + bodyB.position.y) / 2;
-
                   World.remove(engine.world, [bodyA, bodyB]);
-                  const newBall = createFruit(midX, midY, level + 1);
+
+                  // ▼▼▼ 修正: 合体時、下にある方の位置に生成（浮き防止） ▼▼▼
+                  const lowerBody = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
+                  const newX = lowerBody.position.x;
+                  const newY = lowerBody.position.y;
+                  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+                  const newBall = createFruit(newX, newY, level + 1);
                   World.add(engine.world, newBall);
                   
                   playSound('merge', level);
