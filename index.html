@@ -41,26 +41,25 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      /* ▼▼▼ 修正: 幅90%に変更（端っこ操作対策） ▼▼▼ */
       width: 90vw; 
-      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
       height: 70dvh; 
       max-width: 450px;
       max-height: 800px;
       border: 6px solid #e6cba8;
       border-radius: 20px;
-      background: rgba(255,255,255,0.85);
+      /* ▼▼▼ 修正: 透明度を上げて背景を見やすく (0.5) ▼▼▼ */
+      background: rgba(255, 255, 255, 0.5);
+      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-      overflow: visible; /* 雲がはみ出るのでvisible */
+      overflow: visible; 
       touch-action: none;
   }
 
   canvas { display: block; }
 
-  /* ▼▼▼ 雲キャラクター（CSS描画） ▼▼▼ */
+  /* 雲キャラクター */
   #cloud-char {
       position: absolute;
-      /* 箱の上端から少し上にはみ出させる */
       top: -30px;
       left: 50%;
       transform: translateX(-50%);
@@ -68,7 +67,7 @@
       background: #fff;
       border-radius: 50px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-      display: none; /* 最初は非表示 */
+      display: none; 
       z-index: 20;
       pointer-events: none;
   }
@@ -77,14 +76,15 @@
   }
   #cloud-char::before { width: 40px; height: 40px; top: -15px; left: 10px; }
   #cloud-char::after { width: 35px; height: 35px; top: -10px; right: 10px; }
-  /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
 
   /* NEXT表示 */
   #next-area {
       position: absolute;
       top: 10px; right: 10px;
       width: 60px; height: 70px;
-      background: #fff;
+      /* ▼▼▼ 修正: NEXTも箱と同じ透明度に ▼▼▼ */
+      background: rgba(255, 255, 255, 0.5);
+      /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
       border: 3px solid #ffb347;
       border-radius: 12px;
       display: flex;
@@ -129,7 +129,7 @@
       align-items: center;
       z-index: 100;
       transition: opacity 0.5s;
-      border-radius: 15px; /* 角丸に合わせる */
+      border-radius: 15px; 
   }
   .spinner {
       width: 40px; height: 40px;
@@ -167,7 +167,7 @@
   }
   #retry-btn:active { transform: translateY(4px); box-shadow: none; }
 
-  /* ▼▼▼ デンジャーライン（本家仕様：上から20%） ▼▼▼ */
+  /* デンジャーライン */
   #danger-line {
       position: absolute;
       top: 20%; 
@@ -218,34 +218,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 【本家完全一致】サイズ比率 (直径) ▼▼▼
+  // ▼▼▼ 本家完全一致サイズ比率 ▼▼▼
   const SIZE_RATIOS = [
-      0.068, // Lv1: さくらんぼ (6.8%)
-      0.093, // Lv2: いちご
-      0.125, // Lv3: ぶどう
-      0.137, // Lv4: デコポン
-      0.175, // Lv5: かき
-      0.206, // Lv6: りんご
-      0.237, // Lv7: なし
-      0.312, // Lv8: もも
-      0.375, // Lv9: パイナップル
-      0.481, // Lv10: メロン
-      0.600  // Lv11: スイカ (60%)
+      0.068, 0.093, 0.125, 0.137, 0.175, 0.206, 0.237, 0.312, 0.375, 0.481, 0.600
   ];
 
   // ▼▼▼ 11色カラー枠 ▼▼▼
   const BORDER_COLORS = [
-      '#ff5252', // Lv1 赤
-      '#ff4081', // Lv2 ピンク
-      '#e040fb', // Lv3 紫
-      '#ffab40', // Lv4 山吹
-      '#ff6e40', // Lv5 オレンジ
-      '#d50000', // Lv6 深紅
-      '#c6ff00', // Lv7 ライム
-      '#f48fb1', // Lv8 桜色
-      '#ffd600', // Lv9 黄色
-      '#76ff03', // Lv10 緑
-      '#00c853'  // Lv11 濃緑
+      '#ff5252', '#ff4081', '#e040fb', '#ffab40', '#ff6e40', 
+      '#d50000', '#c6ff00', '#f48fb1', '#ffd600', '#76ff03', '#00c853'
   ];
 
   const FRUIT_IMAGES = [
@@ -266,9 +247,8 @@
   let gameWidth, gameHeight;
   let isGameOver = false;
   let dangerTimer = 0;
-  
   let audioCtx = null;
-  let spawnY = 0; // 雲とボールの出現Y座標
+  let spawnY = 0;
   
   let fruitLevels = [];
   const circularImages = {}; 
@@ -282,7 +262,6 @@
   const dangerLineEl = document.getElementById('danger-line');
   const cloudChar = document.getElementById('cloud-char');
 
-  // --- 0. 効果音 (Type B: 明るい電子音) ---
   function initAudio() {
       if (!audioCtx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -302,7 +281,6 @@
       const now = audioCtx.currentTime;
 
       if (type === 'drop') {
-          // 「ポッ！」
           osc.type = 'sine';
           osc.frequency.setValueAtTime(600, now);
           osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
@@ -311,7 +289,6 @@
           osc.start(now);
           osc.stop(now + 0.1);
       } else if (type === 'merge') {
-          // 「ピロリン♪」
           osc.type = 'triangle';
           const baseFreq = 500 + (level * 100);
           osc.frequency.setValueAtTime(baseFreq, now);
@@ -323,14 +300,10 @@
       }
   }
 
-  // --- 1. 画面サイズ計算 (本家比率 1:1.4) ---
   function calculateGameSize() {
-      // ▼▼▼ 修正: 枠幅90%に変更（端っこ対策） ▼▼▼
       const maxWidth = Math.min(window.innerWidth * 0.90, 450);
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
       const maxHeight = window.innerHeight * 0.85;
 
-      // 黄金比率 1 : 1.4
       let w = maxWidth;
       let h = w * 1.4; 
 
@@ -342,9 +315,7 @@
       gameWidth = w;
       gameHeight = h;
       
-      // ▼▼▼ 修正: 出現位置を雲の下あたりに下げる ▼▼▼
       spawnY = 80; 
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       container.style.width = `${gameWidth}px`;
       container.style.height = `${gameHeight}px`;
@@ -359,7 +330,6 @@
       });
   }
 
-  // --- 2. 画像処理 ---
   async function preloadAndCropImages() {
       calculateGameSize();
 
@@ -370,10 +340,9 @@
               img.src = fruit.img;
               
               img.onload = () => {
-                  const scaleFactor = 3; // 3倍高画質
+                  const scaleFactor = 3; 
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
-                  // ▼▼▼ 修正: 枠の太さ 5% ▼▼▼
                   const borderWidth = targetRadius * 0.05; 
                   
                   const canvas = document.createElement('canvas');
@@ -391,7 +360,6 @@
                   const sy = (img.height - sourceSize) / 2;
                   ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, canvasSize, canvasSize);
 
-                  // 枠描画
                   ctx.beginPath();
                   ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2 - borderWidth/2, 0, Math.PI * 2); 
                   ctx.lineWidth = borderWidth;
@@ -417,10 +385,13 @@
       }, 500);
   }
 
-  // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 0.58; // 本家重力
+      engine.world.gravity.y = 0.58; 
+      // ▼▼▼ 修正: 物理演算の精度を上げて「めり込み」を防ぐ ▼▼▼
+      engine.positionIterations = 10; // 標準6 -> 10 (硬くなる)
+      engine.velocityIterations = 10; // 標準4 -> 10
+      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       render = Render.create({
           element: container,
@@ -456,7 +427,6 @@
       spawnReadyBall();
   }
 
-  // --- 4. ボール作成 ---
   function createFruit(x, y, index, isStatic = false) {
       const fruit = fruitLevels[index];
       const texture = circularImages[index];
@@ -464,12 +434,10 @@
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
-          // ▼▼▼ 本家物理設定 ▼▼▼
           restitution: 0.15, 
           friction: 0.01,
           frictionAir: 0.001,
           density: 0.001 * (index + 1),
-          // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
           render: {
               sprite: texture ? {
                   texture: texture,
@@ -503,7 +471,6 @@
       updateCloudPosition(gameWidth/2);
   }
 
-  // --- 5. 操作 ---
   const handleStart = (e) => {
       initAudio();
       if (!canDrop || !currentBall || isGameOver) return;
@@ -570,7 +537,6 @@
   window.addEventListener('mousemove', handleMove);
   window.addEventListener('mouseup', handleEnd);
 
-  // --- 6. 合体 ---
   function handleCollision(event) {
       if (isGameOver) return;
       const pairs = event.pairs;
@@ -598,19 +564,17 @@
       }
   }
 
-  // --- 7. ゲームオーバー判定 (ライン上20%) ---
   function checkGameOver() {
       if (isGameOver) return;
 
       const bodies = Composite.allBodies(engine.world);
-      const dangerY = gameHeight * 0.2; // 上から20%の位置
-      dangerLineEl.style.top = `${dangerY}px`; // ライン描画位置も更新
+      const dangerY = gameHeight * 0.2; 
+      dangerLineEl.style.top = `${dangerY}px`; 
 
       let isDanger = false;
 
       for (const body of bodies) {
           if (!body.isStatic && body !== currentBall) {
-              // 半径の半分がラインを超えたらアウト
               if (body.position.y - body.circleRadius * 0.5 < dangerY) {
                   isDanger = true;
                   break;
@@ -621,7 +585,7 @@
       if (isDanger) {
           dangerLineEl.classList.add('danger-active');
           dangerTimer++;
-          if (dangerTimer > 180) { // 3秒
+          if (dangerTimer > 180) { 
               gameOver();
           }
       } else {
