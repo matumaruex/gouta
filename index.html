@@ -11,6 +11,7 @@
     margin: 0;
     font-family: 'M PLUS Rounded 1c', sans-serif;
     background-color: #fff8e7;
+    /* 背景画像を bg.jpg に設定 */
     background-image: url('bg.jpg');
     background-size: cover;
     background-position: center bottom;
@@ -40,7 +41,7 @@
   /* ゲーム枠 */
   #game-container {
       position: relative;
-      /* JSでサイズ制御するが、初期値として */
+      /* JSで本家比率(1:1.4)に強制リサイズします */
       width: 90vw; 
       height: 70dvh; 
       max-width: 450px;
@@ -49,40 +50,33 @@
       border-radius: 20px;
       background: rgba(255,255,255,0.85);
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-      overflow: visible; /* 雲が枠外に出るのでvisibleに */
+      overflow: visible; /* 雲がはみ出るのでvisible */
       touch-action: none;
   }
 
   canvas { display: block; }
 
-  /* ▼▼▼ 新機能：ボールを運ぶ雲キャラクター ▼▼▼ */
+  /* ▼▼▼ 雲キャラクター ▼▼▼ */
   #cloud-char {
       position: absolute;
-      top: -40px; /* ボールの少し上 */
+      /* 箱の上部5%の位置に配置 */
+      top: 5%; 
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       width: 80px; height: 50px;
-      /* CSSで雲を描く（後で画像に差し替え可能） */
       background: #fff;
       border-radius: 50px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
       display: none; /* 最初は非表示 */
-      justify-content: center;
-      align-items: center;
-      font-size: 20px;
-      pointer-events: none;
       z-index: 20;
+      pointer-events: none;
   }
-  /* 雲のモコモコ感を出す装飾 */
   #cloud-char::before, #cloud-char::after {
-      content: '';
-      position: absolute;
-      background: #fff;
-      border-radius: 50%;
+      content: ''; position: absolute; background: #fff; border-radius: 50%;
   }
   #cloud-char::before { width: 40px; height: 40px; top: -15px; left: 10px; }
   #cloud-char::after { width: 35px; height: 35px; top: -10px; right: 10px; }
-  /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
+  /* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */
 
   /* NEXT表示 */
   #next-area {
@@ -134,6 +128,7 @@
       align-items: center;
       z-index: 100;
       transition: opacity 0.5s;
+      border-radius: 15px; /* 角丸に合わせる */
   }
   .spinner {
       width: 40px; height: 40px;
@@ -155,6 +150,7 @@
       justify-content: center;
       align-items: center;
       z-index: 50;
+      border-radius: 15px;
   }
   #game-over-title { font-size: 2rem; color: #ff7f7f; margin-bottom: 20px; font-weight: bold; }
   #retry-btn {
@@ -170,10 +166,10 @@
   }
   #retry-btn:active { transform: translateY(4px); box-shadow: none; }
 
-  /* デンジャーライン */
+  /* ▼▼▼ デンジャーライン（本家仕様：上から20%） ▼▼▼ */
   #danger-line {
       position: absolute;
-      top: 100px; 
+      top: 20%; 
       left: 0;
       width: 100%;
       height: 0;
@@ -215,29 +211,28 @@
     </div>
     
     <div id="danger-line"></div>
-
     <div id="cloud-char"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
-  // ▼▼▼ 本家完全解析サイズ比率 (直径) ▼▼▼
+  // ▼▼▼ 【本家完全一致】サイズ比率 (直径) ▼▼▼
   const SIZE_RATIOS = [
-      0.05, // Lv1: さくらんぼ (5%)
-      0.07, // Lv2: いちご
-      0.09, // Lv3: ぶどう
-      0.12, // Lv4: デコポン
-      0.15, // Lv5: かき
-      0.20, // Lv6: りんご
-      0.25, // Lv7: なし
-      0.30, // Lv8: もも
-      0.40, // Lv9: パイナップル
-      0.50, // Lv10: メロン
-      0.60  // Lv11: スイカ
+      0.068, // Lv1: さくらんぼ (6.8%)
+      0.093, // Lv2: いちご
+      0.125, // Lv3: ぶどう
+      0.137, // Lv4: デコポン
+      0.175, // Lv5: かき
+      0.206, // Lv6: りんご
+      0.237, // Lv7: なし
+      0.312, // Lv8: もも
+      0.375, // Lv9: パイナップル
+      0.481, // Lv10: メロン
+      0.600  // Lv11: スイカ (60%)
   ];
 
-  // ▼▼▼ 修正: 11色すべて違う色に設定 ▼▼▼
+  // ▼▼▼ 11色カラー枠 ▼▼▼
   const BORDER_COLORS = [
       '#ff5252', // Lv1 赤
       '#ff4081', // Lv2 ピンク
@@ -272,6 +267,7 @@
   let dangerTimer = 0;
   
   let audioCtx = null;
+  let spawnY = 0; // 雲とボールの出現Y座標
   
   let fruitLevels = [];
   const circularImages = {}; 
@@ -283,10 +279,9 @@
   const gameOverScreen = document.getElementById('game-over-screen');
   const finalScoreEl = document.getElementById('final-score');
   const dangerLineEl = document.getElementById('danger-line');
-  // ▼▼▼ 雲キャラ取得 ▼▼▼
   const cloudChar = document.getElementById('cloud-char');
 
-  // --- 0. 効果音システム (Web Audio API) ---
+  // --- 0. 効果音 (Type B: 明るい電子音) ---
   function initAudio() {
       if (!audioCtx) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -299,49 +294,55 @@
 
   function playSound(type, level = 0) {
       if (!audioCtx) return;
-      
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
-
       const now = audioCtx.currentTime;
 
       if (type === 'drop') {
+          // 「ポッ！」
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.setValueAtTime(600, now);
           osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.setValueAtTime(0.1, now);
           gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
           osc.start(now);
           osc.stop(now + 0.1);
       } else if (type === 'merge') {
+          // 「ピロリン♪」
           osc.type = 'triangle';
-          const baseFreq = 400 + (level * 50);
+          const baseFreq = 500 + (level * 100);
           osc.frequency.setValueAtTime(baseFreq, now);
-          osc.frequency.exponentialRampToValueAtTime(baseFreq * 2, now + 0.1);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.frequency.linearRampToValueAtTime(baseFreq + 200, now + 0.1);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
           osc.start(now);
-          osc.stop(now + 0.15);
+          osc.stop(now + 0.2);
       }
   }
 
-  // --- 1. 画面サイズ計算 ---
+  // --- 1. 画面サイズ計算 (本家比率 1:1.4) ---
   function calculateGameSize() {
-      const maxWidth = Math.min(window.innerWidth * 0.88, 450);
+      const maxWidth = Math.min(window.innerWidth * 0.95, 450);
       const maxHeight = window.innerHeight * 0.85;
 
+      // 黄金比率 1 : 1.4
       let w = maxWidth;
-      let h = w * 1.35; 
+      let h = w * 1.4; 
 
       if (h > maxHeight) {
           h = maxHeight;
-          w = h / 1.35;
+          w = h / 1.4;
       }
 
       gameWidth = w;
       gameHeight = h;
+      
+      // 出現位置は上から5%
+      spawnY = gameHeight * 0.05;
+      // 雲の表示位置調整
+      cloudChar.style.top = `${spawnY}px`;
 
       container.style.width = `${gameWidth}px`;
       container.style.height = `${gameHeight}px`;
@@ -356,7 +357,7 @@
       });
   }
 
-  // --- 2. 画像処理（高画質化 & 枠の比率計算） ---
+  // --- 2. 画像処理 ---
   async function preloadAndCropImages() {
       calculateGameSize();
 
@@ -367,11 +368,11 @@
               img.src = fruit.img;
               
               img.onload = () => {
-                  const scaleFactor = 3; 
+                  const scaleFactor = 3; // 3倍高画質
                   const targetRadius = fruit.radius * scaleFactor;
                   const canvasSize = targetRadius * 2;
-                  // ▼▼▼ 修正: 枠の太さを半径の10%に計算 ▼▼▼
-                  const borderWidth = targetRadius * 0.1; 
+                  // ▼▼▼ 修正: 枠の太さ 5% ▼▼▼
+                  const borderWidth = targetRadius * 0.05; 
                   
                   const canvas = document.createElement('canvas');
                   canvas.width = canvasSize;
@@ -388,9 +389,8 @@
                   const sy = (img.height - sourceSize) / 2;
                   ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, canvasSize, canvasSize);
 
-                  // ▼▼▼ 修正: 計算した太さで枠を描画 ▼▼▼
+                  // 枠描画
                   ctx.beginPath();
-                  // 枠が内側にはみ出ないように、半径から太さの半分を引く
                   ctx.arc(canvasSize/2, canvasSize/2, canvasSize/2 - borderWidth/2, 0, Math.PI * 2); 
                   ctx.lineWidth = borderWidth;
                   ctx.strokeStyle = fruit.color;
@@ -418,8 +418,8 @@
   // --- 3. ゲーム初期化 ---
   function initGame() {
       engine = Engine.create();
-      engine.world.gravity.y = 0.58; 
-      
+      engine.world.gravity.y = 0.58; // 本家重力
+
       render = Render.create({
           element: container,
           engine: engine,
@@ -462,10 +462,12 @@
       return Bodies.circle(x, y, fruit.radius, {
           isStatic: isStatic,
           label: 'fruit_' + index,
-          restitution: 0.15,
+          // ▼▼▼ 本家物理設定 ▼▼▼
+          restitution: 0.15, 
           friction: 0.01,
           frictionAir: 0.001,
           density: 0.001 * (index + 1),
+          // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲
           render: {
               sprite: texture ? {
                   texture: texture,
@@ -489,19 +491,17 @@
 
   function spawnReadyBall() {
       if (currentBall || isGameOver) return;
-      currentBall = createFruit(gameWidth/2, 50, currLevelIndex, true);
+      currentBall = createFruit(gameWidth/2, spawnY, currLevelIndex, true);
       currentBall.collisionFilter = { group: -1, category: 0x0002, mask: 0x0000 }; 
       World.add(engine.world, currentBall);
       canDrop = true;
       isDragging = false;
 
-      // ▼▼▼ 雲キャラを表示して位置を合わせる ▼▼▼
       cloudChar.style.display = 'flex';
       updateCloudPosition(gameWidth/2);
   }
 
   // --- 5. 操作 ---
-  
   const handleStart = (e) => {
       initAudio();
       if (!canDrop || !currentBall || isGameOver) return;
@@ -537,13 +537,11 @@
       const minX = fruit.radius + 2;
       const maxX = gameWidth - fruit.radius - 2;
       const clampedX = Math.max(minX, Math.min(maxX, x));
-      Body.setPosition(currentBall, { x: clampedX, y: 50 });
-
-      // ▼▼▼ 雲の位置も更新 ▼▼▼
+      
+      Body.setPosition(currentBall, { x: clampedX, y: spawnY });
       updateCloudPosition(clampedX);
   }
 
-  // 雲の位置を更新する関数
   function updateCloudPosition(x) {
       cloudChar.style.left = `${x}px`;
   }
@@ -554,8 +552,6 @@
       currentBall.collisionFilter = { group: 0, category: 0x0001, mask: 0xFFFFFFFF };
       currentBall = null;
       canDrop = false;
-
-      // ▼▼▼ 雲を非表示に ▼▼▼
       cloudChar.style.display = 'none';
 
       currLevelIndex = nextLevelIndex;
@@ -592,7 +588,6 @@
                   World.add(engine.world, newBall);
                   
                   playSound('merge', level);
-
                   score += (level + 1) * 2;
                   scoreEl.textContent = score;
                   break; 
@@ -601,16 +596,19 @@
       }
   }
 
-  // --- 7. ゲームオーバー判定 ---
+  // --- 7. ゲームオーバー判定 (ライン上20%) ---
   function checkGameOver() {
       if (isGameOver) return;
 
       const bodies = Composite.allBodies(engine.world);
-      const dangerY = 100;
+      const dangerY = gameHeight * 0.2; // 上から20%の位置
+      dangerLineEl.style.top = `${dangerY}px`; // ライン描画位置も更新
+
       let isDanger = false;
 
       for (const body of bodies) {
           if (!body.isStatic && body !== currentBall) {
+              // 半径の半分がラインを超えたらアウト
               if (body.position.y - body.circleRadius * 0.5 < dangerY) {
                   isDanger = true;
                   break;
