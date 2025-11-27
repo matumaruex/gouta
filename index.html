@@ -1,3 +1,25 @@
+<script>
+  (function() {
+    // 🔑 ここが合言葉です。自由に変えてOK
+    var pass = "gouta-himitsu";
+    
+    // 合言葉チェック機能
+    var key = new URLSearchParams(window.location.search).get("key");
+    var save = localStorage.getItem("gouta-access");
+
+    // URLに合言葉があるか、過去に入力済みならOK
+    if (key === pass) {
+      localStorage.setItem("gouta-access", pass); // 保存
+    } else if (save === pass) {
+      // OK (何もしない)
+    } else {
+      // ダメな場合は画面を消して404を表示
+      document.write('<h1 style="margin:20px;">404 Page Not Found</h1>');
+      window.stop(); // 読み込み停止
+      throw new Error("Access Denied"); // 処理停止
+    }
+  })();
+</script>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
