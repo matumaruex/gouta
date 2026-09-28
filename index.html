@@ -564,12 +564,13 @@
                   processedBodies.add(bodyB.id);
                   World.remove(State.engine.world, [bodyA, bodyB]);
                   
-                  const lower = (bodyA.position.y > bodyB.position.y) ? bodyA : bodyB;
-                  const newBall = createFruit(lower.position.x, lower.position.y, level + 1);
+                  const mergeX = (bodyA.position.x + bodyB.position.x) / 2;
+                  const mergeY = (bodyA.position.y + bodyB.position.y) / 2;
+                  const newBall = createFruit(mergeX, mergeY, level + 1);
                   World.add(State.engine.world, newBall);
                   
                   // エフェクトと音
-                  createShockwave(lower.position.x, lower.position.y, newBall.circleRadius);
+                  createShockwave(mergeX, mergeY, newBall.circleRadius);
                   playSound('merge', level);
                   
                   // 本家スコア計算（三角数）
